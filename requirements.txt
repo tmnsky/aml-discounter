@@ -1,0 +1,32 @@
+# Core
+anthropic>=1.0.0
+fastapi>=0.110.0
+uvicorn>=0.27.0
+httpx>=0.27.0
+
+# Parsing
+lxml>=5.0.0
+openpyxl>=3.1.0
+pyyaml>=6.0
+
+# Matching
+rapidfuzz>=3.6.0
+jellyfish>=1.0.0
+PyICU>=2.12
+
+# Date handling
+prefixdate>=0.4.0
+
+# Report generation (openpyxl above covers XLSX)
+
+# Utilities
+orjson>=3.9.0
+click>=8.1.0
+python-dotenv>=1.0.0
+sse-starlette>=1.6.0
+
+# MCP server
+mcp>=1.8.0
+
+# Security
+sqlcipher3-binary>=0.5.0

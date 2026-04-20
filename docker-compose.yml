@@ -1,0 +1,15 @@
+services:
+  aml-discounter:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - aml-data:/data
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      - AUTO_REFRESH=${AUTO_REFRESH:-true}
+      - DATA_DIR=/data
+
+volumes:
+  aml-data:

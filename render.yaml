@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: aml-discounter
+    runtime: docker
+    plan: starter
+    region: ohio
+    disk:
+      name: aml-data
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: AML_API_TOKEN
+        generateValue: true
+      - key: DATA_DIR
+        value: /data
+      - key: PORT
+        value: 8080

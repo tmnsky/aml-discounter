@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AML Discounter</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--text:#e0e0e8;--muted:#6b6b80;--accent:#6366f1;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+header{border-bottom:1px solid var(--border);padding:16px 0;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
+header h1 span{background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.status .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.status .dot.offline{background:var(--red)}
+.status .dot.loading{background:var(--yellow);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:24px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px}
+.panel h2{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:60px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;width:100%;margin-top:8px;transition:opacity .2s}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-outline:hover{border-color:var(--accent);color:var(--text)}
+.progress{margin-top:16px;font-size:12px;color:var(--muted)}
+.progress .step{padding:4px 0;display:flex;align-items:center;gap:8px}
+.progress .step.done{color:var(--green)}
+.progress .step.active{color:var(--accent)}
+.progress .step .check{font-size:14px}
+.result-banner{padding:16px;border-radius:8px;margin-bottom:16px;font-weight:600;font-size:16px;text-align:center}
+.result-banner.clear{background:#0a2e1a;border:1px solid #10b981;color:#10b981}
+.result-banner.flag{background:#2e0a0a;border:1px solid #ef4444;color:#ef4444}
+.result-banner.escalate{background:#2e1f0a;border:1px solid #f59e0b;color:#f59e0b}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center}
+.stat .num{font-size:20px;font-weight:700;color:var(--text)}
+.stat .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg);padding:8px;text-align:left;font-weight:600;color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.5px;position:sticky;top:0}
+td{padding:8px;border-bottom:1px solid var(--border);vertical-align:top}
+tr.cleared td{background:#0a2e1a20}
+tr.likely_match td{background:#2e0a0a20}
+tr.escalate td{background:#2e1f0a20}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase}
+.badge.cleared{background:#0a2e1a;color:#10b981}
+.badge.likely_match{background:#2e0a0a;color:#ef4444}
+.badge.escalate{background:#2e1f0a;color:#f59e0b}
+.table-wrap{max-height:500px;overflow-y:auto;border:1px solid var(--border);border-radius:6px}
+.download-bar{display:flex;gap:8px;margin-top:12px}
+.download-bar .btn{width:auto;padding:8px 16px;font-size:12px}
+.history{margin-top:24px}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.history-item:hover{background:var(--bg);margin:0 -12px;padding:8px 12px;border-radius:4px}
+.history-item .name{font-weight:500}
+.history-item .meta{font-size:11px;color:var(--muted)}
+.empty{text-align:center;padding:40px;color:var(--muted)}
+.warning{background:#2e1f0a;border:1px solid #f59e0b;border-radius:6px;padding:8px 12px;font-size:12px;color:#f59e0b;margin-bottom:12px;display:none}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span>AML</span> Discounter</h1>
+    <div class="status" id="status">
+      <div class="dot loading" id="statusDot"></div>
+      <span id="statusText">Checking...</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Screen Individual</h2>
+        <form id="screenForm">
+          <div class="field">
+            <label>Full Name *</label>
+            <input type="text" name="name" placeholder="e.g. Muhammad Naeem Ahmed" required>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Date of Birth</label>
+              <input type="text" name="dob" placeholder="YYYY-MM-DD">
+            </div>
+            <div class="field">
+              <label>Gender</label>
+              <select name="gender"><option value="">Any</option><option>Male</option><option>Female</option></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Nationality</label>
+            <input type="text" name="nationality" placeholder="e.g. Pakistan, PK">
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>CNIC / National ID</label>
+              <input type="text" name="cnic" placeholder="e.g. 35202-5030579-1">
+            </div>
+            <div class="field">
+              <label>Passport</label>
+              <input type="text" name="passport">
+            </div>
+          </div>
+          <div class="field">
+            <label>Place of Birth</label>
+            <input type="text" name="pob" placeholder="e.g. Karachi">
+          </div>
+          <div class="field">
+            <label>Screened By</label>
+            <input type="text" name="screened_by" placeholder="Your name">
+          </div>
+          <div class="field">
+            <label>Notes</label>
+            <textarea name="notes" placeholder="Additional context..."></textarea>
+          </div>
+          <div class="warning" id="nameWarning">Name-only screening produces less reliable results. Add DOB, nationality, or ID for better accuracy.</div>
+          <button type="submit" class="btn" id="submitBtn">Screen & Discount</button>
+        </form>
+        <div class="progress" id="progress" style="display:none"></div>
+      </div>
+
+      <div class="panel history" id="historyPanel">
+        <h2>History</h2>
+        <div id="historyList"><div class="empty">No screenings yet</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" id="resultsPanel">
+        <h2>Results</h2>
+        <div id="results"><div class="empty">Submit a screening to see results</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const form=document.getElementById('screenForm'),submitBtn=document.getElementById('submitBtn'),progress=document.getElementById('progress'),results=document.getElementById('results'),historyList=document.getElementById('historyList'),nameWarning=document.getElementById('nameWarning');
+let currentResult=null;
+
+// Check status on load
+async function checkStatus(){
+  try{
+    const r=await fetch('/api/status');const d=await r.json();
+    const dot=document.getElementById('statusDot'),txt=document.getElementById('statusText');
+    if(d.ready){dot.className='dot';txt.textContent=`${d.total_entities.toLocaleString()} individuals indexed, ${d.sources.length} sources`}
+    else{dot.className='dot offline';txt.textContent='Data not loaded. Click refresh.'}
+  }catch(e){document.getElementById('statusDot').className='dot offline';document.getElementById('statusText').textContent='Offline'}
+}
+checkStatus();setInterval(checkStatus,30000);
+
+// Name-only warning
+form.querySelector('[name=name]').addEventListener('input',()=>{
+  const hasOther=[...form.querySelectorAll('input:not([name=name]):not([name=screened_by]):not([name=notes])')].some(i=>i.value.trim());
+  const hasSelect=form.querySelector('[name=gender]').value;
+  nameWarning.style.display=(!hasOther&&!hasSelect&&form.querySelector('[name=name]').value.trim())?'block':'none';
+});
+
+// Submit screening
+form.addEventListener('submit',async e=>{
+  e.preventDefault();submitBtn.disabled=true;submitBtn.textContent='Screening...';
+  progress.style.display='block';progress.innerHTML='<div class="step active">Screening against all sources...</div>';
+  results.innerHTML='<div class="empty">Screening in progress...</div>';
+
+  const data=Object.fromEntries(new FormData(form));
+  try{
+    const r=await fetch('/api/screen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    if(!r.ok){const err=await r.json();throw new Error(err.detail||'Screening failed')}
+    currentResult=await r.json();
+    progress.innerHTML=`<div class="step done"><span class="check">&#10003;</span> ${currentResult.raw_candidates} candidates found, ${currentResult.unique_persons} unique, ${currentResult.sent_to_llm} AI-analyzed (${currentResult.processing_ms}ms)</div>`;
+    renderResults(currentResult);
+    loadHistory();
+  }catch(err){
+    progress.innerHTML=`<div class="step" style="color:var(--red)">Error: ${err.message}</div>`;
+    results.innerHTML=`<div class="empty" style="color:var(--red)">${err.message}</div>`;
+  }finally{submitBtn.disabled=false;submitBtn.textContent='Screen & Discount'}
+});
+
+function renderResults(r){
+  const bannerClass={CLEAR:'clear',FLAG:'flag',ESCALATE:'escalate'}[r.result]||'escalate';
+  const bannerText={CLEAR:'CLEAR — All matches discounted',FLAG:'FLAG — Potential match found',ESCALATE:'ESCALATE — Human review needed'}[r.result]||r.result;
+
+  let html=`<div class="result-banner ${bannerClass}">${bannerText}</div>`;
+  html+=`<div class="stats">
+    <div class="stat"><div class="num">${r.raw_candidates}</div><div class="label">Candidates</div></div>
+    <div class="stat"><div class="num">${r.unique_persons}</div><div class="label">Unique</div></div>
+    <div class="stat"><div class="num">${r.auto_cleared}</div><div class="label">Auto-cleared</div></div>
+    <div class="stat"><div class="num">${r.sent_to_llm}</div><div class="label">AI Analyzed</div></div>
+  </div>`;
+
+  if(r.matches&&r.matches.length>0){
+    html+=`<div class="table-wrap"><table><thead><tr>
+      <th>#</th><th>Decision</th><th>Cleared By</th><th>Person</th><th>DOB</th><th>Nationality</th><th>Source Lists</th><th>Key Contradiction</th><th>Reasoning</th>
+    </tr></thead><tbody>`;
+    for(const m of r.matches){
+      const cls=m.decision.toLowerCase().replace(' ','_');
+      html+=`<tr class="${cls}">
+        <td>${m.number}</td>
+        <td><span class="badge ${cls}">${m.decision}</span></td>
+        <td>${m.cleared_by||''}</td>
+        <td><strong>${m.matched_person||''}</strong>${m.aliases?'<br><small>'+m.aliases+'</small>':''}</td>
+        <td>${m.dob||''}</td>
+        <td>${m.nationality||''}</td>
+        <td><small>${m.source_lists||''}</small></td>
+        <td>${m.key_contradiction||''}</td>
+        <td><small>${m.reasoning||''}</small></td>
+      </tr>`;
+    }
+    html+=`</tbody></table></div>`;
+  }else{
+    html+=`<div class="empty">No matches found across all sources</div>`;
+  }
+
+  html+=`<div class="download-bar">
+    <button class="btn btn-outline" onclick="downloadXlsx()">Download XLSX</button>
+    <button class="btn btn-outline" onclick="downloadJson()">Download JSON</button>
+  </div>`;
+
+  results.innerHTML=html;
+}
+
+function downloadXlsx(){if(currentResult)window.location.href=`/api/screen/${currentResult.id}/xlsx`}
+function downloadJson(){
+  if(!currentResult)return;
+  const blob=new Blob([JSON.stringify(currentResult,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=`${currentResult.id}.json`;a.click();URL.revokeObjectURL(url);
+}
+
+async function loadHistory(){
+  try{
+    const r=await fetch('/api/history?limit=20');const d=await r.json();
+    if(!d.screenings.length){historyList.innerHTML='<div class="empty">No screenings yet</div>';return}
+    historyList.innerHTML=d.screenings.map(s=>`
+      <div class="history-item" onclick="loadScreening('${s.id}')">
+        <div><div class="name">${s.name}</div><div class="meta">${s.created_at.slice(0,16)} ${s.screened_by?'by '+s.screened_by:''}</div></div>
+        <span class="badge ${s.result.toLowerCase()}">${s.result}</span>
+      </div>
+    `).join('');
+  }catch(e){}
+}
+loadHistory();
+
+async function loadScreening(id){
+  try{const r=await fetch(`/api/screen/${id}`);currentResult=await r.json();renderResults(currentResult)}catch(e){}
+}
+</script>
+</body>
+</html>
