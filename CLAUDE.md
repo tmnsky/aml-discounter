@@ -95,10 +95,20 @@ Exposes the screening pipeline as MCP tools for AI agents (e.g., ZAR customer su
 }
 ```
 
+## Deployment
+
+- **GitHub**: https://github.com/zarpay/aml-discounter
+- **Render**: https://aml-discounter.onrender.com (srv-d7j9ienavr4c73c6b3pg)
+- **Auth**: Bearer token via `AML_API_TOKEN` env var on all `/api/*` routes
+- **Disk**: 10GB persistent at `/data` for sanctions index + audit logs
+- **Auto-deploy**: pushes to main trigger Render redeploy
+
 ## Conventions
 
+- **Always update README.md** when making user-facing changes (new features, API changes, deployment changes, data source additions). The README is the primary documentation for partners and open-source users.
 - Parsers: one file per source in `app/parsers/`, each returns `list[ListEntry]`
 - All XML parsing uses `lxml`. OFAC uses full-doc load + namespace strip. Others use DOM.
 - Dates: normalize to ISO or year-only strings
 - Names: store primary + all aliases. Use ICU for transliteration.
 - Errors: never crash on bad records. Log and skip. Never return 500 to the user if Claude fails.
+- Auth: locally optional (no `AML_API_TOKEN` = open access). Production requires it.
