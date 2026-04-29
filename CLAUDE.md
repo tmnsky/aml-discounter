@@ -102,8 +102,9 @@ Exposes the screening pipeline as MCP tools for AI agents (e.g., ZAR customer su
 - **Auth**: Bearer token via `AML_API_TOKEN` env var on all `/api/*` routes
 - **Token**: `sp_hwaUz9nkbpnsK2xwFGxLvV5kEly9TJNc4dpRHMjA`
 - **Runtime**: Docker, python:3.12-slim, Oregon, starter plan
+- **Disk**: 10GB persistent at `/data` (`dsk-d7p8ugbeo5us73b88kq0`)
 - **Auto-deploy**: pushes to main trigger Render redeploy
-- **Data refresh**: No persistent disk. Trigger via `POST /api/refresh` after deploy. Takes ~5-10 min.
+- **Data refresh**: Trigger via `POST /api/refresh` after first deploy. Data persists across deploys on disk.
 
 ## Conventions
 
