@@ -11,7 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /data
+RUN mkdir -p /data && \
+    if [ -f seed_data.db ]; then cp seed_data.db /data/sanctions_index.db; fi
 
 ENV DATA_DIR=/data
 ENV HOST=0.0.0.0
