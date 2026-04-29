@@ -95,6 +95,16 @@ Exposes the screening pipeline as MCP tools for AI agents (e.g., ZAR customer su
 }
 ```
 
+## Deployment
+
+- **GitHub**: https://github.com/tmnsky/aml-discounter (public)
+- **Render**: https://aml-discounter.onrender.com (`srv-d7otvfl7vvec738vb800`)
+- **Auth**: Bearer token via `AML_API_TOKEN` env var on all `/api/*` routes
+- **Token**: `sp_hwaUz9nkbpnsK2xwFGxLvV5kEly9TJNc4dpRHMjA`
+- **Runtime**: Docker, python:3.12-slim, Oregon, starter plan
+- **Auto-deploy**: pushes to main trigger Render redeploy
+- **Data refresh**: No persistent disk. Trigger via `POST /api/refresh` after deploy. Takes ~5-10 min.
+
 ## Conventions
 
 - Parsers: one file per source in `app/parsers/`, each returns `list[ListEntry]`
