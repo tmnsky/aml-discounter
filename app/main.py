@@ -22,27 +22,6 @@ logger = logging.getLogger("aml-discounter")
 
 app = FastAPI(title="AML Discounter", version="1.0.0")
 
-# Bearer token auth — optional locally, required in production
-AML_API_TOKEN = os.getenv("AML_API_TOKEN")
-
-
-@app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    """Protect /api/* routes with bearer token when AML_API_TOKEN is set."""
-    # Skip auth when no token configured (local dev)
-    if not AML_API_TOKEN:
-        return await call_next(request)
-    # Skip auth for non-API routes (web UI, static files, health)
-    path = request.url.path
-    if not path.startswith("/api/"):
-        return await call_next(request)
-    # Check bearer token
-    auth = request.headers.get("Authorization", "")
-    if auth != f"Bearer {AML_API_TOKEN}":
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    return await call_next(request)
-
-
 # Serve static files
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
