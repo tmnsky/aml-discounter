@@ -1,5 +1,5 @@
 # Core
-anthropic>=1.0.0
+anthropic>=0.49.0
 fastapi>=0.110.0
 uvicorn>=0.27.0
 httpx>=0.27.0
