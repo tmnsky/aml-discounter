@@ -51,6 +51,15 @@ async def status():
     total_entities = sum(s.get("entity_count", 0) for s in sources)
     index_exists = db.INDEX_DB_PATH.exists()
 
+    # Fallback: if metadata is empty but the index exists, count directly
+    if index_exists and total_entities == 0:
+        try:
+            idx_conn = db.get_index_conn()
+            total_entities = idx_conn.execute("SELECT COUNT(*) FROM sanctions_entities").fetchone()[0]
+            idx_conn.close()
+        except Exception:
+            pass
+
     return {
         "ready": index_exists and total_entities > 0,
         "total_entities": total_entities,
