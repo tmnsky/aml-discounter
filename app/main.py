@@ -81,6 +81,7 @@ async def screen(request: Request):
         "cnic": body.get("cnic", "").strip(),
         "passport": body.get("passport", "").strip(),
         "pob": body.get("pob", "").strip(),
+        "father_name": body.get("father_name", "").strip(),
         "notes": body.get("notes", "").strip(),
     }
     screened_by = body.get("screened_by", "").strip()

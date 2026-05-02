@@ -34,6 +34,7 @@ Look for all of these:
 5. **Temporal impossibility**: The candidate was **listed** (added to a sanctions list) BEFORE the customer's DOB, or within a few years of it. People are typically sanctioned as adults for crimes/associations; if the listing predates the customer's birth, they cannot be the same person. Example: candidate listed 2001-10-17 for Al-Qaida involvement, customer born 2003 → clearly different person.
 6. **Age-at-listing impossibility**: The candidate's role/designation at time of listing implies they were at least ~18 years old then. If `listed_on` minus `customer.dob_year` < 15 years, the customer was too young to have been that person.
 7. **Role/profile mismatch**: Customer is plainly a civilian applicant (22-year-old applying for a wallet); candidate is clearly a military commander, cleric, or senior official from the listing narrative.
+8. **Father's name mismatch**: In patronymic cultures (South Asia, Middle East, Afghanistan), father's name is a key identifier. If both the customer and candidate have stated father's names and they differ significantly (not just transliteration variants), this is strong evidence of different people.
 
 ## Weighing Alias Matches
 If the match is on a WEAK alias rather than the primary name, treat the match as weaker evidence. If the match is on a GOOD (strong) alias, treat it as near-primary-name strength.
@@ -60,6 +61,7 @@ def _format_user(user: dict) -> str:
         "cnic": "CNIC/National ID",
         "passport": "Passport",
         "pob": "Place of Birth",
+        "father_name": "Father's Name",
         "address": "Address",
         "notes": "Additional Notes",
     }
@@ -127,6 +129,8 @@ def _format_match(idx: int, match: DeduplicatedMatch) -> str:
         lines.append(f"  Nationality: {', '.join(rep.nationality)}")
     if rep.gender:
         lines.append(f"  Gender: {rep.gender}")
+    if rep.father_name:
+        lines.append(f"  Father's Name: {rep.father_name}")
     if match.all_identifiers and any(i.get("value") for i in match.all_identifiers):
         id_strs = [f"{d.get('type', 'id')}: {d['value']}" for d in match.all_identifiers[:5] if d.get("value")]
         if id_strs:

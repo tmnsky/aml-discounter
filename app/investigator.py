@@ -48,6 +48,7 @@ Decide whether the customer is or is not the sanctioned/PEP person. Use the rese
 4. Nationality: if research shows different nationality with no dual-citizenship plausibility.
 5. Role/profile mismatch: research describes a senior military officer / cleric / official incompatible with the customer's profile.
 6. Temporal impossibility: listing/activity dates predate customer's plausible adult age.
+7. Father's name: in patronymic cultures (South Asia, Middle East), father's name is a key identifier. If research provides the person's father's name and it differs from the customer's stated father's name, this is strong evidence of different people.
 
 ## Output
 Return JSON only:
@@ -165,6 +166,8 @@ def _format_match_for_investigation(match: DeduplicatedMatch) -> str:
         lines.append(f"  DOB: {', '.join(rep.dob)}")
     if rep.nationality:
         lines.append(f"  Nationality: {', '.join(rep.nationality)}")
+    if rep.father_name:
+        lines.append(f"  Father's Name: {rep.father_name}")
     if rep.listing_reason:
         lines.append(f"  Listing Narrative: {rep.listing_reason[:300]}")
     return "\n".join(lines)
@@ -175,7 +178,8 @@ def _format_customer(customer: dict) -> str:
     lines = ["CUSTOMER RECORD:"]
     for key, label in [
         ("name", "Name"), ("dob", "DOB"), ("nationality", "Nationality"),
-        ("gender", "Gender"), ("cnic", "CNIC/ID"), ("passport", "Passport"),
+        ("gender", "Gender"), ("father_name", "Father's Name"),
+        ("cnic", "CNIC/ID"), ("passport", "Passport"),
         ("pob", "Place of Birth"), ("notes", "Notes"),
     ]:
         val = customer.get(key)

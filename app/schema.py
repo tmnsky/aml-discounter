@@ -21,6 +21,7 @@ class ListEntry:
     pob: list[str] = field(default_factory=list)
     nationality: list[str] = field(default_factory=list)  # ISO country codes
     gender: Optional[str] = None  # "male", "female", None
+    father_name: Optional[str] = None  # patronymic, extracted from some sources (e.g. SECO)
     identifiers: list[dict] = field(
         default_factory=list
     )  # [{type, value, country}, ...]

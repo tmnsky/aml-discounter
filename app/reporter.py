@@ -67,6 +67,7 @@ def _build_summary_sheet(ws, result: ScreeningResult):
         ("CNIC / National ID", user.get("cnic", "Not provided"), NORMAL_FONT),
         ("Passport", user.get("passport", "Not provided"), NORMAL_FONT),
         ("Gender", user.get("gender", "Not provided"), NORMAL_FONT),
+        ("Father's Name", user.get("father_name", "Not provided"), NORMAL_FONT),
         ("Place of Birth", user.get("pob", "Not provided"), NORMAL_FONT),
         ("", "", None),
         ("Screened At", result.timestamp, NORMAL_FONT),
