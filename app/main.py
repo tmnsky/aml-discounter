@@ -14,13 +14,36 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
+from contextlib import asynccontextmanager
+
 from . import db
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("aml-discounter")
 
-app = FastAPI(title="AML Discounter", version="1.0.0")
+# MCP session manager needs lifecycle management
+_mcp_app = None
+_mcp_session_mgr = None
+try:
+    from .mcp_server import mcp as _mcp_instance
+    _mcp_app = _mcp_instance.streamable_http_app()
+    _mcp_session_mgr = _mcp_instance.session_manager
+except Exception as e:
+    logger.warning("Could not load MCP server: %s", e)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    if _mcp_session_mgr:
+        async with _mcp_session_mgr.run():
+            logger.info("MCP session manager started")
+            yield
+    else:
+        yield
+
+
+app = FastAPI(title="AML Discounter", version="1.0.0", lifespan=lifespan)
 
 # Serve static files
 STATIC_DIR = Path(__file__).parent / "static"
@@ -28,13 +51,9 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Mount MCP server at /mcp for remote clients
-try:
-    from .mcp_server import mcp as mcp_server
-    mcp_app = mcp_server.streamable_http_app()
-    app.mount("/mcp", mcp_app)
+if _mcp_app:
+    app.mount("/mcp", _mcp_app)
     logger.info("MCP server mounted at /mcp")
-except Exception as e:
-    logger.warning("Could not mount MCP server: %s", e)
 
 # Initialize audit DB on startup
 db.init_audit_db()

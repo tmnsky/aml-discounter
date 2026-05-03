@@ -34,6 +34,7 @@ logger = logging.getLogger("aml-mcp")
 
 mcp = FastMCP(
     name="AML Discounter",
+    streamable_http_path="/",
     instructions=(
         "AML/sanctions screening tool for ZAR customer support.\n\n"
         "Use `screen_customer` to check if a customer matches any sanctions or PEP lists. "
