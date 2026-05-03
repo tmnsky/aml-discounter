@@ -71,12 +71,26 @@ curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
 
 Exposes screening as tools for AI agents (Claude Code, Claude Desktop).
 
+### Remote (recommended for partners)
+
+Connect to the hosted instance. No setup required:
+
+```json
+{
+  "mcpServers": {
+    "aml-discounter": {
+      "url": "https://aml-discounter.onrender.com/mcp/"
+    }
+  }
+}
+```
+
+### Local (for development)
+
 ```bash
-# Run locally (stdio)
 python -m app.mcp_server
 ```
 
-**Claude Code config** (add to `.mcp.json`):
 ```json
 {
   "mcpServers": {
@@ -89,7 +103,8 @@ python -m app.mcp_server
 }
 ```
 
-**Tools:**
+### Tools
+
 - `screen_customer` -- full screening with verdict (CLEAR / FLAG / ESCALATE)
 - `get_screening_report` -- generate XLSX audit report
 - `get_screening_details` -- retrieve detailed match info
