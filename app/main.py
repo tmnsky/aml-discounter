@@ -27,6 +27,15 @@ STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+# Mount MCP server at /mcp for remote clients
+try:
+    from .mcp_server import mcp as mcp_server
+    mcp_app = mcp_server.streamable_http_app()
+    app.mount("/mcp", mcp_app)
+    logger.info("MCP server mounted at /mcp")
+except Exception as e:
+    logger.warning("Could not mount MCP server: %s", e)
+
 # Initialize audit DB on startup
 db.init_audit_db()
 
