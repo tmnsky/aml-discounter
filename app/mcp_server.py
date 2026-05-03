@@ -154,6 +154,7 @@ async def screen_customer(
     cnic: Annotated[str, "CNIC or national ID number"] = "",
     passport: Annotated[str, "Passport number"] = "",
     gender: Annotated[str, "Gender: Male or Female"] = "",
+    father_name: Annotated[str, "Father's name (critical for South Asian/Middle Eastern names)"] = "",
     address: Annotated[str, "Current address"] = "",
     notes: Annotated[str, "Additional context about the customer"] = "",
 ) -> dict:
@@ -170,6 +171,7 @@ async def screen_customer(
         "cnic": cnic.strip(),
         "passport": passport.strip(),
         "pob": "",
+        "father_name": father_name.strip(),
         "notes": f"{address}\n{notes}".strip() if address or notes else "",
     }
 
