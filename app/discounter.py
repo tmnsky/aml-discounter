@@ -16,6 +16,26 @@ logger = logging.getLogger(__name__)
 MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 MAX_BATCH = 25  # split into multiple calls if >25 matches
 
+# Source codes for hard sanctions / law-enforcement lists (vs. PEP lists).
+# Clearing one of these on name-structure alone, with no biographical data on
+# the listed person, is unsafe — the safety guard forces ESCALATE instead.
+HARD_LIST_SOURCES = frozenset({
+    "ofac_sdn", "ofac_cons", "un_consolidated", "eu_fsf", "uk_sanctions",
+    "ca_sema", "ch_seco", "australia_dfat", "fbi_wanted",
+})
+
+# Phrases in Claude's reasoning that signal it wanted MORE review than its
+# verdict field claims. If any appear in the reasoning of a CLEARED verdict,
+# the verdict is downgraded to ESCALATE (fail toward review). High-precision
+# list: each phrase names the competing verdict or an explicit doubt about
+# clearing — not generic words like "cannot" that appear in valid clears.
+ESCALATION_LANGUAGE = (
+    "escalate", "escalation", "human review", "manual review",
+    "warrants review", "needs review", "should be reviewed",
+    "cannot confidently clear", "cannot be confidently cleared",
+    "insufficient to clear", "unable to clear", "warrants further",
+)
+
 SYSTEM_PROMPT = """You are a sanctions and PEP screening specialist. Your task is to evaluate whether a customer record matches any of the listed sanctions/PEP candidates.
 
 ## Core Principle
@@ -39,8 +59,21 @@ Look for all of these:
 ## Weighing Alias Matches
 If the match is on a WEAK alias rather than the primary name, treat the match as weaker evidence. If the match is on a GOOD (strong) alias, treat it as near-primary-name strength.
 
+## When you CANNOT clear (escalate instead)
+Name analysis alone is NOT a contradiction. If a candidate on a sanctions or
+law-enforcement listing (OFAC, UN, EU, UK, Canada, Switzerland, Australia, FBI)
+has NO date of birth, NO nationality, and NO ID number, you have nothing
+concrete to contradict against. "The name is ordered differently" or "this token
+is absent" is insufficient to CLEAR such a candidate — return ESCALATE. You
+cannot confidently clear against a listing with no biographical data. (This bar
+is lower for PEP listings, where a match means enhanced due diligence, not a block.)
+
+Do not use the word "escalate" in your reasoning unless your verdict is ESCALATE.
+If you find yourself writing that a match "warrants review" or "warrants escalation,"
+your verdict must be ESCALATE, not CLEARED.
+
 ## Verdict Definitions
-- CLEARED: You found explicit contradictory evidence that proves this is a different person (any of the 7 contradiction types above).
+- CLEARED: You found explicit contradictory evidence that proves this is a different person (any of the 8 contradiction types above).
 - LIKELY_MATCH: No contradictions found. Names are consistent. Biographical details align or are absent on both sides.
 - ESCALATE: Genuinely ambiguous. Some supporting similarity, no contradictions, but not enough confidence. Human review needed.
 
@@ -202,7 +235,59 @@ def _parse_response(content: str, expected_count: int) -> list[dict]:
         if d["verdict"] not in valid_verdicts:
             d["verdict"] = "ESCALATE"
 
+    # Safety guard: if the model CLEARED a candidate but its own reasoning
+    # contains escalation/uncertainty language, the structured verdict and the
+    # prose disagree. Fail toward review — downgrade to ESCALATE.
+    for d in decisions:
+        if d["verdict"] == "CLEARED":
+            reasoning_lc = d["reasoning"].lower()
+            hit = next((p for p in ESCALATION_LANGUAGE if p in reasoning_lc), None)
+            if hit:
+                logger.warning(
+                    "Verdict/reasoning conflict on match %s: CLEARED verdict but "
+                    "reasoning contains '%s' — forcing ESCALATE",
+                    d["match_number"], hit,
+                )
+                d["verdict"] = "ESCALATE"
+                d["reasoning"] = (
+                    f"[Auto-escalated: model's reasoning contained '{hit}' but "
+                    f"returned CLEARED] {d['reasoning']}"
+                )
+
     return decisions
+
+
+def _on_hard_list(match: DeduplicatedMatch) -> bool:
+    """True if the candidate appears on a sanctions or law-enforcement list."""
+    sources = {s.get("source") for s in match.all_sources}
+    sources.add(match.representative.source)
+    return bool(sources & HARD_LIST_SOURCES)
+
+
+def _has_no_biographical_data(match: DeduplicatedMatch) -> bool:
+    """True if the listed person has no DOB, nationality, or identifier to verify against."""
+    rep = match.representative
+    has_id = bool(match.all_identifiers) and any(i.get("value") for i in match.all_identifiers)
+    return not (bool(rep.dob) or bool(rep.nationality) or has_id)
+
+
+def _apply_no_data_guard(verdict: str, reasoning: str, match: DeduplicatedMatch) -> tuple[str, str]:
+    """Safety guard: a CLEARED verdict on a sanctions/wanted listing that has NO
+    biographical data (no DOB, no nationality, no ID) rests on name analysis
+    alone. You cannot confidently clear against a ghost on a terror list —
+    force ESCALATE for human review."""
+    if verdict == "CLEARED" and _on_hard_list(match) and _has_no_biographical_data(match):
+        name = match.representative.names[0] if match.representative.names else "unknown"
+        logger.warning(
+            "No-data clearing blocked: '%s' is on a sanctions/wanted list with no "
+            "DOB/nationality/ID — forcing ESCALATE", name,
+        )
+        return "ESCALATE", (
+            "[Auto-escalated: candidate is on a sanctions/law-enforcement list with no "
+            "date of birth, nationality, or ID number to verify against. A name-based "
+            f"clearing is insufficient for this listing.] {reasoning}"
+        )
+    return verdict, reasoning
 
 
 def discount_matches(
@@ -275,12 +360,15 @@ def discount_matches(
                 decision_map = {d["match_number"]: d for d in parsed}
                 for i, match in enumerate(batch, 1):
                     d = decision_map.get(i, {})
+                    verdict = d.get("verdict", "ESCALATE")
+                    reasoning = d.get("reasoning", "No reasoning provided")
+                    verdict, reasoning = _apply_no_data_guard(verdict, reasoning, match)
                     all_decisions.append(MatchDecision(
                         match_number=i + (batch_idx * MAX_BATCH),
-                        decision=d.get("verdict", "ESCALATE"),
+                        decision=verdict,
                         contradictions=[{"detail": c} if isinstance(c, str) else c for c in d.get("contradictions", [])],
                         supporting_similarities=[{"detail": s} if isinstance(s, str) else s for s in d.get("supporting_similarities", [])],
-                        reasoning=d.get("reasoning", "No reasoning provided"),
+                        reasoning=reasoning,
                         cleared_by="ai",
                     ))
 
@@ -313,12 +401,15 @@ def discount_matches(
                     decision_map = {d["match_number"]: d for d in parsed}
                     for i, match in enumerate(batch, 1):
                         d = decision_map.get(i, {})
+                        verdict = d.get("verdict", "ESCALATE")
+                        reasoning = d.get("reasoning", "Parse retry succeeded")
+                        verdict, reasoning = _apply_no_data_guard(verdict, reasoning, match)
                         all_decisions.append(MatchDecision(
                             match_number=i + (batch_idx * MAX_BATCH),
-                            decision=d.get("verdict", "ESCALATE"),
+                            decision=verdict,
                             contradictions=[{"detail": c} if isinstance(c, str) else c for c in d.get("contradictions", [])],
                             supporting_similarities=[{"detail": s} if isinstance(s, str) else s for s in d.get("supporting_similarities", [])],
-                            reasoning=d.get("reasoning", "Parse retry succeeded"),
+                            reasoning=reasoning,
                             cleared_by="ai",
                         ))
                 except Exception as retry_err:
